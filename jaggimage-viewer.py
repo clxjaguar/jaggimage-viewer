@@ -946,7 +946,10 @@ class DescriptionEditor(QDialog):
 
 	@staticmethod
 	def readDescriptionFile(txtFilename):
-		return open(txtFilename).read().strip()
+		try:
+			return open(txtFilename).read().strip()
+		except UnicodeDecodeError:
+			return open(txtFilename, encoding="windows-1252", errors="ignore").read().strip()
 
 	@staticmethod
 	def readAcdDescriptionFile(imgFilename):
