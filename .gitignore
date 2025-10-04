@@ -3,8 +3,10 @@
 .venv/
 
 # Ignore build files.
+__pycache__/
 dist/
 _version.py
 
-# Misc.
+# Misc. Tooling and IDEs.
 .jj
+.vscode/

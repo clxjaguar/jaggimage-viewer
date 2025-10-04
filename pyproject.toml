@@ -17,13 +17,19 @@ requires = [
 build-backend = "hatchling.build"
 
 [project.gui-scripts]
-jaggimage-viewer = "jaggimage_viewer.jaggimage_viewer:main"
+jaggimage-viewer = "jaggimage_viewer:main"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "jaggimage_viewer/_version.py"
+version-file = "_version.py"
+
+[tool.hatch.build.targets.wheel]
+include = ["*.py"]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "jaggimage_viewer"
 
 [tool.hatch.version.raw-options]
 version_scheme = "python-simplified-semver"
