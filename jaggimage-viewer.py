@@ -309,10 +309,15 @@ class ImageViewer(QMainWindow):
 	def updateWindowTitleAndStatusBar(self):
 		if self.filename is not None:
 			basename = os.path.basename(self.filename)
+			size = os.path.getsize(self.filename)
+			if size < 1048576: sizeStr = "%.1f KiB" % (size/1024)
+			else:              sizeStr = "%.1f MiB" % (size/1048576)
 		else:
 			basename = "(not a file)"
+			sizeStr = ""
+
 		self.setWindowTitle("%s (%d/%d)" % (basename, self.fileIndex+1, len(self.files)))
-		self.statusBar().showMessage("%d/%d   %s   %dx%d   %s" % (self.fileIndex+1, len(self.files), basename, self.pixmap.width(), self.pixmap.height(), self.imageDescription))
+		self.statusBar().showMessage("%d/%d   %s   %s   %dx%d   %d%%   %s" % (self.fileIndex+1, len(self.files), basename, sizeStr, self.pixmap.width(), self.pixmap.height(), 100*self.scaleFactor, self.imageDescription))
 
 		if self.imageDescription and self.fullScreen:
 				self.statusBar().show()
@@ -413,6 +418,7 @@ class ImageViewer(QMainWindow):
 	def setScale(self, scale=None):
 		if scale:
 			self.scaleFactor = scale
+			self.updateWindowTitleAndStatusBar()
 
 		if not self.imageLabel.pixmap():
 			return
