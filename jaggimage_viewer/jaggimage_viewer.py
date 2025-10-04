@@ -19,8 +19,12 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 import sys, os, time
 
+try:
+	from jaggimage_viewer._version import version
+except ImportError:
+	version = "0.0.0"
+
 WINDOW_TITLE = "Jaggimage Viewer"
-VERSION = "v1.1"
 IMG_EXT = (".jpg", ".jpeg", ".jpe", ".gif", ".png", ".bmp", ".webp", ".tif", ".tiff")
 
 class ImageViewer(QMainWindow):
@@ -187,7 +191,7 @@ class ImageViewer(QMainWindow):
 		      "just the functionalities on the old ACDSee version I was used to.\n\n"\
 		      "This program is under free software licence.\n\n"\
 		      "Visit GitHub page?"
-		a = QMessageBox.information(self, WINDOW_TITLE+' '+VERSION, txt, QMessageBox.Yes|QMessageBox.No)
+		a = QMessageBox.information(self, WINDOW_TITLE+' '+version, txt, QMessageBox.Yes|QMessageBox.No)
 		if a == QMessageBox.Yes:
 			QDesktopServices.openUrl(QUrl("https://github.com/clxjaguar/jaggimage-viewer"))
 
