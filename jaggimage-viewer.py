@@ -949,11 +949,7 @@ class DescriptionEditor(QDialog):
 				continue
 
 			if f == basename:
-				imageDescription = "\n\n".join(d.strip().split('   '))
-				l = 0
-				while l != len(imageDescription):
-					l = len(imageDescription)
-					imageDescription = imageDescription.replace('\n\n\n', '\n\n')
+				imageDescription = "\n\n".join(filter(lambda s: len(s), map(str.strip, d.strip().split('   '))))
 				return imageDescription
 
 		raise ValueError
