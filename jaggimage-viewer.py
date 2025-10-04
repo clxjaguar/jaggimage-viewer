@@ -258,6 +258,10 @@ class ImageViewer(QMainWindow):
 		self.setWindowIcon(icon)
 
 	def getDescription(self):
+		if self.filename is None:
+			self.imageDescription = ""
+			return
+
 		try:
 			# Try to read a text file for description
 			txtFilename = DescriptionEditor.txtFilename(self.filename)
