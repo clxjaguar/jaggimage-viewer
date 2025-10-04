@@ -4,3 +4,7 @@
 
 # Ignore build files.
 dist/
+_version.py
+
+# Misc.
+.jj
