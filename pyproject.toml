@@ -1,0 +1,17 @@
+[project]
+name = "jaggimage-viewer"
+version = "1.1.0"
+description = "A nice image viewer in the spirit of ACDSee"
+readme = "README.md"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
+dependencies = [
+    "pyqt5>=5.15.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.gui-scripts]
+jaggimage-viewer = "jaggimage_viewer:main"

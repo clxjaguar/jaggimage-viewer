@@ -1,0 +1,6 @@
+# Ignore uv environment files.
+.python-version
+.venv/
+
+# Ignore build files.
+dist/
