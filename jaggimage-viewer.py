@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import *
 import sys, os, time
 
 WINDOW_TITLE = "Jaggimage Viewer"
-VERSION = "v1.0"
+VERSION = "v1.1"
 IMG_EXT = (".jpg", ".jpeg", ".jpe", ".gif", ".png", ".bmp", ".webp", ".tif", ".tiff")
 
 class ImageViewer(QMainWindow):
@@ -330,7 +330,9 @@ class ImageViewer(QMainWindow):
 			i = len(self.files)-1
 		filename = self.files[i]
 		print("Start preload of", filename)
+		QApplication.setOverrideCursor(Qt.WaitCursor)
 		self.prevPixmap = QPixmap(filename)
+		QApplication.restoreOverrideCursor()
 		if self.prevPixmap.isNull():
 			print("Preload \"%s\" into pixmap FAILED" % filename)
 			self.prevPixmap = None
@@ -345,7 +347,9 @@ class ImageViewer(QMainWindow):
 			i = 0
 		filename = self.files[i]
 		print("Start preload of", filename)
+		QApplication.setOverrideCursor(Qt.WaitCursor)
 		self.nextPixmap = QPixmap(filename)
+		QApplication.restoreOverrideCursor()
 		if self.nextPixmap.isNull():
 			print("Preload \"%s\" into pixmap FAILED" % filename)
 			self.nextPixmap = None
