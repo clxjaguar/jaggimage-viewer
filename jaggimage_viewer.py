@@ -311,14 +311,17 @@ class ImageViewer(QMainWindow):
 		self.preloadPreviousImageTimer.start(150)
 
 	def updateWindowTitleAndStatusBar(self):
-		if self.filename is not None:
-			basename = os.path.basename(self.filename)
-			size = os.path.getsize(self.filename)
-			if size < 1048576: sizeStr = "%.1f KiB" % (size/1024)
-			else:              sizeStr = "%.1f MiB" % (size/1048576)
-		else:
+		if self.filename is None:
 			basename = "(not a file)"
 			sizeStr = ""
+		else:
+			basename = os.path.basename(self.filename)
+			try:
+				size = os.path.getsize(self.filename)
+				if size < 1048576: sizeStr = "%.1f KiB" % (size/1024)
+				else:              sizeStr = "%.1f MiB" % (size/1048576)
+			except FileNotFoundError:
+				sizeStr = "[NOT FOUND]"
 
 		self.setWindowTitle("%s (%d/%d)" % (basename, self.fileIndex+1, len(self.files)))
 		self.statusBar().showMessage("%d/%d   %s   %s   %dx%d   %d%%   %s" % (self.fileIndex+1, len(self.files), basename, sizeStr, self.pixmap.width(), self.pixmap.height(), 100*self.scaleFactor, self.imageDescription))
