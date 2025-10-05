@@ -175,6 +175,7 @@ class ImageViewer(QMainWindow):
 		self.contextMenu.addAction("Save Currents Preferences to Defaults", self.writeConfig)
 
 		self.contextMenu.addSeparator()
+		self.contextMenu.addAction("Open...", self.openFileDialog, "Ctrl+O")
 		self.contextMenu.addAction("Copy Image to Clipboard", self.clipBoardCopy, "Ctrl+C")
 		self.contextMenu.addAction("Edit Description", self.editDescription, "Ctrl+D")
 		self.contextMenu.addAction("Run Editor (%s)" % (os.path.basename(self.imgEditor)), self.runEditor, "Ctrl+E")
@@ -194,6 +195,18 @@ class ImageViewer(QMainWindow):
 		a = QMessageBox.information(self, WINDOW_TITLE+' '+version, txt, QMessageBox.Yes|QMessageBox.No)
 		if a == QMessageBox.Yes:
 			QDesktopServices.openUrl(QUrl("https://github.com/clxjaguar/jaggimage-viewer"))
+
+	def openFileDialog(self):
+		filterStr = "Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in IMG_EXT]))
+		files = QFileDialog.getOpenFileNames(self, "Select one or more files...", filter=filterStr)[0]
+		if len(files):
+			self.files = files
+			self.loadImage(self.files[0])
+			if len(self.files) == 1:
+				QTimer.singleShot(100, self.listImagesInSameDirectory)
+			else:
+				self.preloadNextImageTimer.start(200)
+				self.preloadPreviousImageTimer.start(300)
 
 	def loadImage(self, filename, preloadedPixmap=None, firstRun=False):
 		self.imageDescription = ""
@@ -774,6 +787,10 @@ class ImageViewer(QMainWindow):
 
 			case Qt.Key_F | Qt.Key_F11:
 				self.toggleFullScreen()
+
+			case Qt.Key_O:
+				if event.modifiers() & Qt.ControlModifier:
+					self.openFileDialog()
 
 			case Qt.Key_Home:
 				self.loadFirstImage()
