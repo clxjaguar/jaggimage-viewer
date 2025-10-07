@@ -196,10 +196,11 @@ class ImageViewer(QMainWindow):
 
 	def openFileDialog(self):
 		filterStr = "Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in IMG_EXT]))
-		files = QFileDialog.getOpenFileNames(self, "Select one or more files...", filter=filterStr)[0]
+		dirPath = os.path.dirname(self.filename) if self.filename is not None else '.'
+		files = QFileDialog.getOpenFileNames(self, "Select one or more files...", dirPath, filter=filterStr)[0]
 		if len(files):
-			self.files = files
-			self.loadImage(self.files[0])
+			self.files, self.fileIndex = files, 0
+			self.loadImage(self.files[self.fileIndex])
 			if len(self.files) == 1:
 				QTimer.singleShot(100, self.listImagesInSameDirectory)
 			else:
@@ -268,7 +269,7 @@ class ImageViewer(QMainWindow):
 			return
 
 		icon = QIcon()
-		p = self.pixmap.scaled(100, 100) # TODO: validate this
+		p = self.pixmap.scaled(100, 100)
 		icon.addPixmap(p)
 		self.setWindowIcon(icon)
 
