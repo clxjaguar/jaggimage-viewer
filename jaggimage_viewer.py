@@ -98,8 +98,6 @@ class ImageViewer(QMainWindow):
 			self.resize(self.pixmap.width(), self.pixmap.height())
 
 		self.show()
-		self.fetchScreenResolution() # TODO? Test the file with small monitor
-
 		self.installEventFilter(self)
 		self.scrollTimer = QTimer()
 		self.scrollTimer.timeout.connect(self.scrollTimerTimeout)
@@ -298,12 +296,6 @@ class ImageViewer(QMainWindow):
 
 		self.imageDescription = ""
 
-	def fetchScreenResolution(self):
-		rec = QApplication.desktop().screenGeometry()
-		height = rec.height()
-		width = rec.width()
-		print(height, width)
-
 	def listImagesInSameDirectory(self):
 		t = time.time()
 		if self.filename is None:
@@ -460,6 +452,11 @@ class ImageViewer(QMainWindow):
 
 	def setScaleBestFitIfLargerToScreenOnly(self, firstRun=False):
 		targetSize = self.getTargetSize(firstRun=firstRun)
+		if firstRun:
+			# not enough time after show(), so we do not know on what screen will be
+			# the window yet (if fullscreen), nor the place taken by window decorations,
+			# so, we'll try again soon after that as a workaround
+			QTimer.singleShot(1, self.setScaleBestFitIfLargerToScreenOnly)
 		targetScaleFactorWidth = targetSize.width() / self.imageLabel.pixmap().width()
 		targetScaleFactorHeight = targetSize.height() / self.imageLabel.pixmap().height()
 		targetScaleFactor = min(targetScaleFactorWidth, targetScaleFactorHeight)
