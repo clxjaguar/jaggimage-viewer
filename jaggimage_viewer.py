@@ -195,10 +195,17 @@ class ImageViewer(QMainWindow):
 			QDesktopServices.openUrl(QUrl("https://github.com/clxjaguar/jaggimage-viewer"))
 
 	def openFileDialog(self):
-		filterStr = "Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in IMG_EXT]))
-		dirPath = os.path.dirname(self.filename) if self.filename is not None else '.'
-		files = QFileDialog.getOpenFileNames(self, "Select one or more files...", dirPath, filter=filterStr)[0]
-		if len(files):
+		fileOpenDialog = QFileDialog(self, "Select one or more files...")
+		fileOpenDialog.setDirectory(os.path.dirname(self.filename) if self.filename is not None else '.')
+		fileOpenDialog.setNameFilter("Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in IMG_EXT])))
+		if os.name != 'nt':
+			fileOpenDialog.setOptions(QFileDialog.DontUseNativeDialog) # case insensitive filters on all platforms plz!
+		fileOpenDialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+		fileOpenDialog.setFilter(QDir.Filter.AllEntries|QDir.Filter.NoDotAndDotDot|QDir.Filter.AllDirs)
+
+		if fileOpenDialog.exec():
+			files = fileOpenDialog.selectedFiles()
+			if len(files) == 0: return
 			self.files, self.fileIndex = files, 0
 			self.loadImage(self.files[self.fileIndex])
 			if len(self.files) == 1:
