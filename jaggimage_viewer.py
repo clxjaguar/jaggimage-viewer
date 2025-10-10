@@ -419,7 +419,7 @@ class ImageViewer(QMainWindow):
 		self.preloadPreviousImageTimer.start(200)
 
 	def editDescription(self):
-		if os.path.exists(self.filename):
+		if self.filename and os.path.exists(self.filename):
 			self.descriptionEditor = DescriptionEditor(self.imageDescription, self.filename)
 			self.descriptionEditor.descriptionChanged.connect(self.descriptionChanged)
 			if self.fullScreen:
@@ -428,7 +428,6 @@ class ImageViewer(QMainWindow):
 				self.descriptionEditor.move(x+5, y)
 
 	def descriptionChanged(self, descImgFilename, imageDescription):
-		print(descImgFilename, self.filename)
 		if descImgFilename == self.filename:
 			self.imageDescription = imageDescription
 			self.updateWindowTitleAndStatusBar()
@@ -436,7 +435,6 @@ class ImageViewer(QMainWindow):
 	def close(self):
 		try: self.descriptionEditor.close()
 		except: pass
-
 		super().close()
 
 	def setScale(self, scale=None):
@@ -471,6 +469,7 @@ class ImageViewer(QMainWindow):
 		if self.scaleFactor > targetScaleFactor: self.setScale(targetScaleFactor)
 
 	def setScaleBestFit(self):
+		if self.imageLabel.pixmap() is None: return
 		targetSize = self.getTargetSize()
 		targetScaleFactorWidth = targetSize.width() / self.imageLabel.pixmap().width()
 		targetScaleFactorHeight = targetSize.height() / self.imageLabel.pixmap().height()
