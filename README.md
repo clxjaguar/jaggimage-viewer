@@ -25,6 +25,7 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | `*`                                                      | Toggle zoom best-fit / full width or height                              |
 | `Ctrl`+`/`                                               | Toggle zoom lock (zoom level not changing when displaying another image) |
 | `F`, `F11`, Double-click                                 | Toggle full-screen mode                                                  |
+| `A`                                                      | Toggle animation enabled (and force animation/disable interpolation)     |
 | `B`                                                      | Toggle status bar                                                        |
 | `Ctrl+D`                                                 | Edit file description                                                    |
 | Arrows keys (with `Ctrl`: faster, with `Shift`: slower)  | Panning image (if not zoomed best fit)                                   |

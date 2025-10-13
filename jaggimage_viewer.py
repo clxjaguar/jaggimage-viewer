@@ -64,6 +64,9 @@ class ImageViewer(QMainWindow):
 		self.setIconFromPixmapTimer = QTimer()
 		self.setIconFromPixmapTimer.setSingleShot(True)
 		self.setIconFromPixmapTimer.timeout.connect(self.setIconFromPixmap)
+		self.tryToLoadAnimationTimer = QTimer()
+		self.tryToLoadAnimationTimer.setSingleShot(True)
+		self.tryToLoadAnimationTimer.timeout.connect(self.tryToLoadAnimation)
 
 		self.fileIndex = 0
 		self.files = []
@@ -114,6 +117,7 @@ class ImageViewer(QMainWindow):
 		self.fullScreen       = settings.value("fullScreen",       True,  type=bool)
 		self.zoomLock         = settings.value("zoomLock",         False, type=bool)
 		self.windowAutoResize = settings.value("windowAutoResize", True,  type=bool)
+		self.enableAnimation  = settings.value("enableAnimation",  True,  type=bool)
 		self.imgEditor        = settings.value("imgEditor",        "gimp")
 
 	def writeConfig(self):
@@ -121,6 +125,7 @@ class ImageViewer(QMainWindow):
 		settings.setValue("fullScreen", self.fullScreen)
 		settings.setValue("zoomLock", self.zoomLock)
 		settings.setValue("windowAutoResize", self.windowAutoResize)
+		settings.setValue("enableAnimation", self.enableAnimation)
 		settings.setValue("imgEditor", self.imgEditor)
 		settings.sync()
 
@@ -150,6 +155,13 @@ class ImageViewer(QMainWindow):
 		self.statusBarMenuAction.setShortcut(Qt.Key_B)
 		self.statusBarMenuAction.triggered.connect(self.toggleStatusBar)
 		self.contextMenu.addAction(self.statusBarMenuAction)
+
+		self.enableAnimationMenuAction = QAction("Enable Animation")
+		self.enableAnimationMenuAction.setCheckable(True)
+		self.enableAnimationMenuAction.setChecked(self.enableAnimation)
+		self.enableAnimationMenuAction.setShortcut(Qt.Key_A)
+		self.enableAnimationMenuAction.triggered.connect(self.toggleEnableAnimation)
+		self.contextMenu.addAction(self.enableAnimationMenuAction)
 
 		self.contextMenu.addSeparator()
 		self.contextMenu.addAction("Zoom In",       lambda: self.setScale(self.scaleFactor*1.2), "+")
@@ -265,6 +277,9 @@ class ImageViewer(QMainWindow):
 					w, h = int(self.scaleFactor*self.pixmap.width()), int(self.scaleFactor*self.pixmap.height())
 					self.resize(w, h)
 
+		if self.enableAnimation:
+			self.tryToLoadAnimationTimer.start(250)
+
 		self.setIconFromPixmapTimer.start(300)
 		self.getDescriptionTimer.start(200)
 		self.updateWindowTitleAndStatusBar()
@@ -337,7 +352,13 @@ class ImageViewer(QMainWindow):
 				sizeStr = "[NOT FOUND]"
 
 		self.setWindowTitle("%s (%d/%d)" % (basename, self.fileIndex+1, len(self.files)))
-		self.statusBar().showMessage("%d/%d   %s   %s   %dx%d   %d%%   %s" % (self.fileIndex+1, len(self.files), basename, sizeStr, self.pixmap.width(), self.pixmap.height(), 100*self.scaleFactor, self.imageDescription))
+		misc = ""
+		if self.imageLabel.movie() and self.imageLabel.movie().frameCount() > 1:
+			if self.imageLabel.movie().state() == QMovie.Running:
+				misc+=" (%d frames)" % (self.imageLabel.movie().frameCount())
+			else:
+				misc+=" (frame %d/%d)" % (self.imageLabel.movie().currentFrameNumber()+1, self.imageLabel.movie().frameCount())
+		self.statusBar().showMessage("%d/%d   %s   %s   %dx%d%s   %d%%   %s" % (self.fileIndex+1, len(self.files), basename, sizeStr, self.pixmap.width(), self.pixmap.height(), misc, 100*self.scaleFactor, self.imageDescription))
 
 		if self.imageDescription and self.fullScreen:
 				self.statusBar().show()
@@ -442,11 +463,11 @@ class ImageViewer(QMainWindow):
 			self.scaleFactor = scale
 			self.updateWindowTitleAndStatusBar()
 
-		if not self.imageLabel.pixmap():
+		if self.pixmap.isNull():
 			return
 
-		w = int(self.scaleFactor * self.imageLabel.pixmap().width())
-		h = int(self.scaleFactor * self.imageLabel.pixmap().height())
+		w = int(self.scaleFactor * self.pixmap.width())
+		h = int(self.scaleFactor * self.pixmap.height())
 		xf, yf = self.scrollArea.positionMiddleF()
 		self.imageLabel.setScaledContents(True if scale != 1 else False)
 		self.imageLabel.resize(w, h)
@@ -463,16 +484,16 @@ class ImageViewer(QMainWindow):
 			# the window yet (if fullscreen), nor the place taken by window decorations,
 			# so, we'll try again soon after that as a workaround
 			QTimer.singleShot(1, self.setScaleBestFitIfLargerToScreenOnly)
-		targetScaleFactorWidth = targetSize.width() / self.imageLabel.pixmap().width()
-		targetScaleFactorHeight = targetSize.height() / self.imageLabel.pixmap().height()
+		targetScaleFactorWidth = targetSize.width() / self.pixmap.width()
+		targetScaleFactorHeight = targetSize.height() / self.pixmap.height()
 		targetScaleFactor = min(targetScaleFactorWidth, targetScaleFactorHeight)
 		if self.scaleFactor > targetScaleFactor: self.setScale(targetScaleFactor)
 
 	def setScaleBestFit(self):
-		if self.imageLabel.pixmap() is None: return
+		if self.pixmap.isNull(): return
 		targetSize = self.getTargetSize()
-		targetScaleFactorWidth = targetSize.width() / self.imageLabel.pixmap().width()
-		targetScaleFactorHeight = targetSize.height() / self.imageLabel.pixmap().height()
+		targetScaleFactorWidth = targetSize.width() / self.pixmap.width()
+		targetScaleFactorHeight = targetSize.height() / self.pixmap.height()
 
 		minTargetScaleFactor = min(targetScaleFactorWidth, targetScaleFactorHeight)
 		maxTargetScaleFactor = max(targetScaleFactorWidth, targetScaleFactorHeight)
@@ -520,6 +541,32 @@ class ImageViewer(QMainWindow):
 
 		try: self.statusBarMenuAction.setChecked(False if self.statusBar().isHidden() else True)
 		except: pass
+
+	def toggleEnableAnimation(self):
+		self.enableAnimation = not self.enableAnimation
+		try: self.enableAnimationMenuAction.setChecked(self.enableAnimation)
+		except: pass
+
+		if not self.filename: return
+
+		if self.imageLabel.movie():
+			self.imageLabel.movie().setPaused(not self.enableAnimation)
+		elif self.enableAnimation:
+			QApplication.setOverrideCursor(Qt.WaitCursor)
+			movie = QMovie(self.filename)
+			self.imageLabel.setMovie(movie)
+			movie.start()
+			QApplication.restoreOverrideCursor()
+		self.updateWindowTitleAndStatusBar()
+
+	def tryToLoadAnimation(self):
+		QApplication.setOverrideCursor(Qt.WaitCursor)
+		movie = QMovie(self.filename)
+		if movie.frameCount() > 1:
+			self.imageLabel.setMovie(movie)
+			movie.start()
+			self.updateWindowTitleAndStatusBar()
+		QApplication.restoreOverrideCursor()
 
 	def toggleZoomLock(self):
 		self.zoomLock = not(self.zoomLock)
@@ -632,7 +679,10 @@ class ImageViewer(QMainWindow):
 	def clipBoardCopy(self):
 		try:
 			t = time.time()
-			QGuiApplication.clipboard().setPixmap(self.pixmap)
+			if self.imageLabel.movie():
+				QGuiApplication.clipboard().setImage(self.imageLabel.movie().currentImage())
+			else:
+				QGuiApplication.clipboard().setPixmap(self.pixmap)
 			self.statusBar().showMessage("Copied \"%s\" into clipboard in %.2f ms" % (self.filename, (time.time()-t)*1000.0))
 		except Exception as e:
 			QMessageBox.warning(self, "Copy error", str(e))
@@ -777,6 +827,9 @@ class ImageViewer(QMainWindow):
 
 			case Qt.Key_F10:
 				self.contextMenuExec(self.pos())
+
+			case Qt.Key_A:
+				self.toggleEnableAnimation()
 
 			case Qt.Key_B:
 				self.toggleStatusBar()
