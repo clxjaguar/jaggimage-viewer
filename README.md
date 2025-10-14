@@ -16,7 +16,7 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | Shortcut(s)                                              | Functionality                                                            |
 |----------------------------------------------------------|--------------------------------------------------------------------------|
 | `Space`, `Page Down`, Scroll wheel                       | Next image                                                               |
-| `Backspace`, `Page Up`, Scroll wheel                     | Previous image                                                           |
+| `Backspace`, `Page Up`, `Shift`+`Space`, Scroll wheel    | Previous image                                                           |
 | `Home`                                                   | First image                                                              |
 | `End`                                                    | Last image                                                               |
 | `+`, `Ctrl`/`Shift` + Scroll wheel                       | Zoom in                                                                  |

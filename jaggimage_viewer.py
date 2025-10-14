@@ -856,7 +856,10 @@ class ImageViewer(QMainWindow):
 				self.loadLastImage()
 
 			case Qt.Key_Space | Qt.Key_PageDown:
-				self.loadNextImage()
+				if event.modifiers() & Qt.ShiftModifier:
+					self.loadPreviousImage()
+				else:
+					self.loadNextImage()
 
 			case Qt.Key_Backspace | Qt.Key_PageUp:
 				self.loadPreviousImage()
