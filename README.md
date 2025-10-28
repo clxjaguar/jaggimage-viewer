@@ -27,6 +27,7 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | `F`, `F11`, Double-click                                 | Toggle full-screen mode                                                  |
 | `A`                                                      | Toggle animation enabled (and force animation/disable interpolation)     |
 | `B`                                                      | Toggle status bar                                                        |
+| `Shift+C`                                                | Colors (background and transparency) settings dialog                     |
 | `Ctrl+D`                                                 | Edit file description                                                    |
 | Arrows keys (with `Ctrl`: faster, with `Shift`: slower)  | Panning image (if not zoomed best fit)                                   |
 | `Alt`+`←` and `Alt`+`→`                                  | Rotating image view                                                      |

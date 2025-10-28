@@ -35,7 +35,7 @@ class ImageViewer(QMainWindow):
 		self.scaleFactor = 1
 		self.imageDescription = ""
 		self.windowDecorationSize = QSize(20, 30)
-		self.setStyleSheet("#imageLabel, QScrollArea { background-color: black; color: white; }")
+		self.updateStyleSheet()
 		self.imageLabel = QLabel()
 		self.imageLabel.setObjectName("imageLabel")
 		self.imageLabel.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
@@ -119,6 +119,8 @@ class ImageViewer(QMainWindow):
 		self.windowAutoResize = settings.value("windowAutoResize", True,  type=bool)
 		self.enableAnimation  = settings.value("enableAnimation",  True,  type=bool)
 		self.imgEditor        = settings.value("imgEditor",        "gimp")
+		self.transparencyColor= settings.value("transparencyColor","#ffffff")
+		self.backgroundColor  = settings.value("backgroundColor",  "#000000")
 
 	def writeConfig(self):
 		settings = QSettings("Jaggimage-Viewer")
@@ -127,6 +129,8 @@ class ImageViewer(QMainWindow):
 		settings.setValue("windowAutoResize", self.windowAutoResize)
 		settings.setValue("enableAnimation", self.enableAnimation)
 		settings.setValue("imgEditor", self.imgEditor)
+		settings.setValue("transparencyColor", self.transparencyColor)
+		settings.setValue("backgroundColor", self.backgroundColor)
 		settings.sync()
 
 	def contextMenuExec(self, pos):
@@ -182,6 +186,7 @@ class ImageViewer(QMainWindow):
 		self.windowAutoResizeMenuAction.triggered.connect(self.toggleWindowAutoResize)
 		self.contextMenu.addAction(self.windowAutoResizeMenuAction)
 
+		self.contextMenu.addAction("Background Colors...", self.showColorsDialog, "Shift+C")
 		self.contextMenu.addAction("Save Currents Preferences to Defaults", self.writeConfig)
 
 		self.contextMenu.addSeparator()
@@ -225,6 +230,15 @@ class ImageViewer(QMainWindow):
 			else:
 				self.preloadNextImageTimer.start(200)
 				self.preloadPreviousImageTimer.start(300)
+
+	def showColorsDialog(self):
+		try: self.colorsDialog.close()
+		except: pass
+		self.colorsDialog = ColorsDialog(self)
+
+	def updateStyleSheet(self):
+		textColor = 'black' if qGray(QColor(self.transparencyColor).rgb()) > 100 else 'white'
+		self.setStyleSheet("#imageLabel { color: %s; background-color: %s; } QScrollArea { background-color: %s; }" % (textColor, self.transparencyColor, self.backgroundColor))
 
 	def loadImage(self, filename, preloadedPixmap=None, firstRun=False):
 		self.imageDescription = ""
@@ -875,6 +889,8 @@ class ImageViewer(QMainWindow):
 			case Qt.Key_C:
 				if event.modifiers() & Qt.ControlModifier:
 					self.clipBoardCopy()
+				elif event.modifiers() & Qt.ShiftModifier:
+					self.showColorsDialog()
 
 			case Qt.Key_V:
 				if event.modifiers() & Qt.ControlModifier:
@@ -1054,6 +1070,69 @@ class DescriptionEditor(QDialog):
 				return imageDescription
 
 		raise ValueError
+
+
+class ColorsDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.parent = parent
+		self.setWindowTitle("Background Colors")
+		self.setStyleSheet('QLineEdit { font-family: monospace; } *[valid="false"] { background-color: #ffa0a0; }')
+
+		l = QGridLayout(self)
+		l.addWidget(QLabel("Transparency color:"), 1, 0)
+		self.transparencyColorLE = QLineEdit()
+		self.transparencyColorLE.setText(self.parent.transparencyColor)
+		l.addWidget(self.transparencyColorLE, 1, 1)
+		self.transparencyColorLE.textChanged.connect(self.validateColors)
+		self.behindImageBtn = QToolButton()
+		self.behindImageBtn.setText("...")
+		self.behindImageBtn.clicked.connect(lambda: self.openColorPicker(self.transparencyColorLE))
+		l.addWidget(self.behindImageBtn, 1, 2)
+
+		l.addWidget(QLabel("Background color:"), 2, 0)
+		self.backgroundColorLE = QLineEdit()
+		self.backgroundColorLE.setText(self.parent.backgroundColor)
+		self.backgroundColorLE.textChanged.connect(self.validateColors)
+		l.addWidget(self.backgroundColorLE, 2, 1)
+		self.aroundImageBtn = QToolButton()
+		self.aroundImageBtn.setText("...")
+		self.aroundImageBtn.clicked.connect(lambda: self.openColorPicker(self.backgroundColorLE))
+		l.addWidget(self.aroundImageBtn, 2, 2)
+
+		self.colorPicker = QColorDialog(self)
+		self.colorPicker.currentColorChanged.connect(self.currentColorChanged)
+		self.colorPicker.rejected.connect(self.colorPickerCanceled)
+		self.validateColors()
+		self.show()
+		self.move(QCursor.pos())
+
+	def openColorPicker(self, lineEdit):
+		self.currentLE = lineEdit
+		self.colorPicker.setCurrentColor(QColor(self.currentLE.text()))
+		self.currentLE.oldText = lineEdit.text()
+		self.colorPicker.show()
+
+	def currentColorChanged(self, color):
+		self.currentLE.setText(color.name())
+
+	def colorPickerCanceled(self):
+		self.currentLE.setText(self.currentLE.oldText)
+
+	def validateColors(self):
+		for lineEdit in (self.transparencyColorLE, self.backgroundColorLE):
+			lineEdit.isValid = QColor(lineEdit.text()).isValid()
+			lineEdit.setProperty("valid", lineEdit.isValid)
+			match lineEdit.isValid, lineEdit:
+				case True, self.transparencyColorLE:
+					self.parent.transparencyColor = lineEdit.text()
+				case True, self.backgroundColorLE:
+					self.parent.backgroundColor = lineEdit.text()
+		self.parent.updateStyleSheet()
+
+	def closeEvent(self, event):
+		if self.colorPicker:
+			self.colorPicker.close()
 
 
 def is_image_ext(filename):
