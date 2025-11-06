@@ -146,6 +146,9 @@ class ImageViewer(QMainWindow):
 		self.contextMenu.addAction("Next Image", self.loadNextImage, "Space")
 		self.contextMenu.addAction("Reload Image and Relist Directory", self.refresh, "F5")
 		self.contextMenu.addSeparator()
+		self.contextMenu.addAction("Open...", self.openFileDialog, "Ctrl+O")
+		self.contextMenu.addAction("Search files recursively...", self.showSearchForFilesRecursivelyDialog, "Ctrl+Shift+O")
+		self.contextMenu.addSeparator()
 		self.fullScreenMenuAction = QAction("Fullscreen")
 		self.fullScreenMenuAction.setCheckable(True)
 		self.fullScreenMenuAction.setChecked(self.fullScreen)
@@ -190,7 +193,6 @@ class ImageViewer(QMainWindow):
 		self.contextMenu.addAction("Save Currents Preferences to Defaults", self.writeConfig)
 
 		self.contextMenu.addSeparator()
-		self.contextMenu.addAction("Open...", self.openFileDialog, "Ctrl+O")
 		self.contextMenu.addAction("Copy Image to Clipboard", self.clipBoardCopy, "Ctrl+C")
 		self.contextMenu.addAction("Edit Description", self.editDescription, "Ctrl+D")
 		self.contextMenu.addAction("Run Editor (%s)" % (os.path.basename(self.imgEditor)), self.runEditor, "Ctrl+E")
@@ -230,6 +232,11 @@ class ImageViewer(QMainWindow):
 			else:
 				self.preloadNextImageTimer.start(200)
 				self.preloadPreviousImageTimer.start(300)
+
+	def showSearchForFilesRecursivelyDialog(self):
+		try: self.searchForFilesRecursivelyDialog.close()
+		except: pass
+		self.searchForFilesRecursivelyDialog = SearchForFilesRecursivelyDialog(self)
 
 	def showColorsDialog(self):
 		try: self.colorsDialog.close()
@@ -860,6 +867,10 @@ class ImageViewer(QMainWindow):
 				self.toggleFullScreen()
 
 			case Qt.Key_O:
+				if event.modifiers() & Qt.ControlModifier and event.modifiers() & Qt.ShiftModifier:
+					self.showSearchForFilesRecursivelyDialog()
+					return
+
 				if event.modifiers() & Qt.ControlModifier:
 					self.openFileDialog()
 
@@ -1133,6 +1144,137 @@ class ColorsDialog(QDialog):
 	def closeEvent(self, event):
 		if self.colorPicker:
 			self.colorPicker.close()
+
+
+class SearchForFilesRecursivelyDialog(QDialog):
+	def __init__(self, parent):
+		if 're' not in sys.modules.keys():
+			import re
+		super().__init__(parent)
+		self.parent = parent
+		self.setStyleSheet('*[valid="false"] { background-color: #ffa0a0; }')
+		self.filter = None
+		self.files = []
+		self.searchTimer = QTimer()
+		self.searchTimer.timeout.connect(self.continueSearching)
+		self.setWindowTitle("Search Recursively")
+		l = QGridLayout(self)
+		label = QLabel("&Directory:")
+		l.addWidget(label, l.rowCount(), 0)
+		self.directoryLE = QLineEdit(os.path.dirname(self.parent.filename) if self.parent.filename is not None else '.')
+		self.directoryLE.setMinimumWidth(350)
+		l.addWidget(self.directoryLE, l.rowCount()-1, 1)
+		self.changeDirectoryBtn = QToolButton()
+		self.changeDirectoryBtn.setText("...")
+		self.changeDirectoryBtn.clicked.connect(self.changeDirectoryBtnClicked)
+		l.addWidget(self.changeDirectoryBtn, l.rowCount()-1, 3)
+		label.setBuddy(self.changeDirectoryBtn)
+
+		label = QLabel("&Filter:")
+		l.addWidget(label, l.rowCount(), 0)
+		self.filterLE = QLineEdit()
+		self.filterLE.setPlaceholderText("Regular Expression Search...")
+		self.filterLE.textChanged.connect(self.validateFilter)
+		l.addWidget(self.filterLE, l.rowCount()-1, 1)
+		label.setBuddy(self.filterLE)
+		b = QToolButton()
+		b.setText("?")
+		b.sizeHint = self.changeDirectoryBtn.sizeHint
+		b.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://en.wikipedia.org/wiki/Regular_expression")))
+		l.addWidget(b, l.rowCount()-1, 3)
+
+		self.caseSensitiveCB = QCheckBox("RegEx filtering is case-sensitive")
+		self.caseSensitiveCB.clicked.connect(self.validateFilter)
+		l.addWidget(self.caseSensitiveCB, l.rowCount(), 0, 1, 3)
+		self.exploreDotDirectoriesCB = QCheckBox("Also explore subdirectories with name starting with a dot")
+		l.addWidget(self.exploreDotDirectoriesCB, l.rowCount(), 0, 1, 3)
+		self.doNotFilterKnowExtensions = QCheckBox("Also return files without known image extension (%s)" % (' '.join(IMG_EXT)))
+		l.addWidget(self.doNotFilterKnowExtensions, l.rowCount(), 0, 1, 3)
+
+		self.searchBtn = QPushButton("&Search")
+		self.searchBtn.clicked.connect(self.searchBtnClicked)
+		l.addWidget(self.searchBtn, l.rowCount(), 0)
+		self.statusLabel = QLabel()
+		l.addWidget(self.statusLabel, l.rowCount()-1, 1, 1, 2)
+
+		self.show()
+		self.move(QCursor.pos())
+
+	def validateFilter(self):
+		try:
+			if self.filterLE.text() == "":
+				self.filter = None
+			else:
+				re = sys.modules['re']
+				self.filter = re.compile(self.filterLE.text(), re.IGNORECASE if not self.caseSensitiveCB.isChecked() else 0)
+			self.statusLabel.setText('')
+			isFilterValid = True
+		except Exception as e:
+			self.statusLabel.setText(str(e))
+			isFilterValid = False
+
+		self.filterLE.setProperty("valid", isFilterValid)
+		self.searchBtn.setEnabled(isFilterValid)
+		self.filterLE.setStyle(self.filterLE.style())
+
+	def changeDirectoryBtnClicked(self):
+		fileOpenDialog = QFileDialog(self, "Select directory to search recursively into...")
+		fileOpenDialog.setDirectory(self.directoryLE.text())
+		fileOpenDialog.setNameFilter("Directories (*)")
+		if os.name != 'nt': fileOpenDialog.setOptions(QFileDialog.DontUseNativeDialog)
+		fileOpenDialog.setFileMode(QFileDialog.FileMode.Directory)
+		fileOpenDialog.setFilter(QDir.Filter.AllDirs|QDir.Filter.Drives|QDir.Filter.NoDotAndDotDot)
+		if fileOpenDialog.exec(): self.directoryLE.setText(fileOpenDialog.selectedFiles()[0])
+
+	def searchBtnClicked(self):
+		if not self.searchTimer.isActive():
+			self.files = []
+			self.searchFct = self.searchRecursively(self.directoryLE.text(), exploreDotDirs=self.exploreDotDirectoriesCB.isChecked())
+			self.searchTimer.start(1)
+			self.searchBtn.setText("&Stop")
+		else:
+			self.searchTimer.stop()
+			self.statusLabel.setText("Search aborted.")
+			self.searchBtn.setText("&Search")
+			del self.searchFct
+
+	def continueSearching(self):
+		try:
+			currentDir, files = next(self.searchFct)
+			if not self.doNotFilterKnowExtensions.isChecked():
+				files = list(filter(is_image_ext, files))
+			if self.filter:
+				files = list(filter(self.filter.search, files))
+			files.sort(key=str.casefold)
+			files = map(lambda f: os.path.join(currentDir, f), files)
+			self.files+=files
+			currentDir = currentDir.replace(self.directoryLE.text(), '', 1)
+			if len(currentDir) > 50:
+				currentDir = "..."+currentDir[-50:]
+			self.statusLabel.setText("%s files (searching in %s)" % (len(self.files), currentDir))
+
+		except StopIteration:
+			self.searchTimer.stop()
+			self.statusLabel.setText("Search finished: %s file(s) found." % (len(self.files)))
+			self.searchBtn.setText("&Search")
+			if len(self.files) <= 0:
+				return
+
+			print(self.files)
+			self.parent.files = self.files
+			self.parent.fileIndex = float('nan')
+			self.parent.loadFirstImage()
+
+		except Exception as e:
+			self.searchTimer.stop()
+			raise(e)
+
+	@staticmethod
+	def searchRecursively(directory, exploreDotDirs=False):
+		for root, walk_dirs, walk_files in os.walk(directory):
+			if not exploreDotDirs:
+				walk_dirs[:] = [d for d in walk_dirs if not d.startswith('.')]
+			yield root, walk_files
 
 
 def is_image_ext(filename):

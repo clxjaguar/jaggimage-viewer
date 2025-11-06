@@ -36,6 +36,7 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | `F5`                                                     | Reload file and relist directory                                         |
 | `F10`                                                    | Show contextual menu                                                     |
 | `Ctrl`+`O`                                               | Open a specific file (in same or different directory)                    |
+| `Ctrl`+`Shift`+`O`                                       | Open a dialog for searching images recursively                           |
 | `Ctrl`+`C`                                               | Copy current image to clipboard                                          |
 | `Ctrl`+`E`                                               | Open the image with an external editor (gimp by default)                 |
 | `Escape`, `Ctrl`+`W` (and probably `Alt`+`F4` too)       | Quit the program                                                         |
