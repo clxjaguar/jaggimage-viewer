@@ -52,6 +52,7 @@ class ImageViewer(QMainWindow):
 		self.statusBar().hide()
 		self.setWindowTitle(WINDOW_TITLE)
 
+		self.descriptionEditor = None
 		self.getDescriptionTimer = QTimer()
 		self.getDescriptionTimer.setSingleShot(True)
 		self.getDescriptionTimer.timeout.connect(self.getDescription)
@@ -462,6 +463,10 @@ class ImageViewer(QMainWindow):
 
 	def editDescription(self):
 		if self.filename and os.path.exists(self.filename):
+			if self.descriptionEditor is not None:
+				self.descriptionEditor.displayDescription(self.imageDescription, self.filename)
+				return
+
 			self.descriptionEditor = DescriptionEditor(self.imageDescription, self.filename)
 			self.descriptionEditor.descriptionChanged.connect(self.descriptionChanged)
 			if self.fullScreen:
@@ -987,11 +992,10 @@ class DescriptionEditor(QDialog):
 	descriptionChanged = pyqtSignal(str, str)
 	def __init__(self, description, imgFilename):
 		super().__init__()
-		self.imgFilename = imgFilename
 		layout = QVBoxLayout(self)
 		layout.setContentsMargins(0, 0, 0, 0)
 		layout.setSpacing(0)
-		self.textEdit = self.CustomQPlainTextEdit(description)
+		self.textEdit = self.CustomQPlainTextEdit()
 		self.textEdit.textChanged.connect(self.textChanged)
 		layout.addWidget(self.textEdit)
 		hlayout = QHBoxLayout()
@@ -1006,7 +1010,7 @@ class DescriptionEditor(QDialog):
 			w.hide()
 			hlayout.addWidget(w)
 
-		self.setWindowTitle(os.path.basename(self.imgFilename))
+		self.displayDescription(description, imgFilename)
 		self.show()
 
 	class CustomQPlainTextEdit(QPlainTextEdit):
@@ -1038,6 +1042,14 @@ class DescriptionEditor(QDialog):
 
 			super().wheelEvent(event)
 
+	def displayDescription(self, description, imgFilename):
+		self.imgFilename = imgFilename
+		self.textEdit.setPlainText(description)
+		self.setWindowTitle(os.path.basename(self.imgFilename))
+		for w in self.cancelBtn, self.saveBtn:
+			w.hide()
+		self.show()
+
 	def textChanged(self):
 		for w in self.cancelBtn, self.saveBtn:
 			w.show()
@@ -1049,7 +1061,6 @@ class DescriptionEditor(QDialog):
 		for w in self.cancelBtn, self.saveBtn:
 			w.hide()
 		self.descriptionChanged.emit(self.imgFilename, self.textEdit.toPlainText())
-
 
 	@staticmethod
 	def txtFilename(imgFilename):
