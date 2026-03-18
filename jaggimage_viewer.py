@@ -727,6 +727,13 @@ class ImageViewer(QMainWindow):
 		self.pixmap = self.pixmap.transformed(transform)
 		self.loadImage(self.filename, self.pixmap)
 
+	def flipImage(self, vertical=False):
+		transform = QTransform()
+		if vertical: transform.scale(1, -1)
+		else:        transform.scale(-1, 1)
+		self.pixmap = self.pixmap.transformed(transform)
+		self.loadImage(self.filename, self.pixmap)
+
 	def scrollTimerTimeout(self):
 		if not self.scrollDeltaX and not self.scrollDeltaY:
 			self.scrollTimer.stop()
@@ -898,6 +905,14 @@ class ImageViewer(QMainWindow):
 			case Qt.Key_Right:
 				if event.modifiers() & (Qt.AltModifier):
 					self.rotateImage(clockWise=True)
+
+			case Qt.Key_Up:
+				if event.modifiers() & (Qt.AltModifier):
+					self.flipImage()
+
+			case Qt.Key_Down:
+				if event.modifiers() & (Qt.AltModifier):
+					self.flipImage(vertical=True)
 
 			case Qt.Key_C:
 				if event.modifiers() & Qt.ControlModifier:

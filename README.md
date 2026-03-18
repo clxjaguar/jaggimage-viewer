@@ -30,7 +30,8 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | `Shift+C`                                                | Colors (background and transparency) settings dialog                     |
 | `Ctrl+D`                                                 | Edit file description                                                    |
 | Arrows keys (with `Ctrl`: faster, with `Shift`: slower)  | Panning image (if not zoomed best fit)                                   |
-| `Alt`+`←` and `Alt`+`→`                                  | Rotating image view                                                      |
+| `Alt`+`←` or `Alt`+`→`                                   | Rotating image view                                                      |
+| `Alt`+`↑` or `Alt`+`↓`                                   | Flip image view                                                          |
 | `F2`                                                     | Rename file (and .txt description file, if present)                      |
 | `Del`                                                    | Delete current file (and display next image)                             |
 | `F5`                                                     | Reload file and relist directory                                         |
