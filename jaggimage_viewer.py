@@ -28,6 +28,7 @@ class ImageViewer(QMainWindow):
 	def __init__(self, filename=None, filesList=None):
 		super().__init__()
 		sys.excepthook = self.unhandledException
+		self.imgsExt = ['.'+f.data().decode('utf8') for f in QImageReader.supportedImageFormats()]
 		self.readConfig()
 		self.scaleFactor = 1
 		self.imageDescription = ""
@@ -71,7 +72,7 @@ class ImageViewer(QMainWindow):
 
 		# if the filename given is a directory, try to find any file with recognized image extension...
 		if filename and os.path.isdir(filename):
-			self.files = list_dir_img_abs(filename)
+			self.files = self.listDirImgAbs(filename)
 			if len(self.files) == 0:
 				QMessageBox.critical(None, WINDOW_TITLE, "No suitable image found in \"%s\" directory." % (filename), QMessageBox.Close )
 				exit(1)
@@ -81,7 +82,7 @@ class ImageViewer(QMainWindow):
 		if filesList:
 			for f in filesList:
 				if os.path.isdir(f):
-					for f2 in list_dir_img_abs(f): self.files.append(f2)
+					for f2 in self.listDirImgAbs(f): self.files.append(f2)
 				else:
 					self.files.append(os.path.abspath(f))
 
@@ -90,7 +91,7 @@ class ImageViewer(QMainWindow):
 			if len(self.files) > 0:
 				filename = self.files[0]
 			else:
-				self.files = list_dir_img_abs('.')
+				self.files = self.listDirImgAbs('.')
 				if len(self.files):
 					filename = self.files[0]
 
@@ -109,6 +110,12 @@ class ImageViewer(QMainWindow):
 		else:
 			self.preloadNextImageTimer.start(200)
 			self.preloadPreviousImageTimer.start(300)
+
+	def isImageExt(self, filename):
+		return os.path.splitext(filename)[1].lower() in self.imgsExt
+
+	def listDirImgAbs(self, path='.'):
+		return list(map(lambda f: os.path.abspath(os.path.join(path, f)), sorted(filter(self.isImageExt, os.listdir(path)), key=str.casefold)))
 
 	def readConfig(self):
 		settings = QSettings("Jaggimage-Viewer")
@@ -214,7 +221,7 @@ class ImageViewer(QMainWindow):
 	def openFileDialog(self):
 		fileOpenDialog = QFileDialog(self, "Select one or more files...")
 		fileOpenDialog.setDirectory(os.path.dirname(self.filename) if self.filename is not None else '.')
-		fileOpenDialog.setNameFilter("Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in IMG_EXT])))
+		fileOpenDialog.setNameFilter("Images files (%s);;No filter... (*)" % (" ".join(['*'+ext for ext in self.imgsExt])))
 		if os.name != 'nt':
 			fileOpenDialog.setOptions(QFileDialog.DontUseNativeDialog) # case insensitive filters on all platforms plz!
 		fileOpenDialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
@@ -342,10 +349,10 @@ class ImageViewer(QMainWindow):
 		t = time.time()
 		if self.filename is None:
 			self.dirname = os.path.abspath(".")
-			self.files = list_dir_img_abs(self.dirname)
+			self.files = self.listDirImgAbs(self.dirname)
 		else:
 			self.dirname, basename = os.path.split(os.path.abspath(self.filename))
-			self.files = list_dir_img_abs(self.dirname)
+			self.files = self.listDirImgAbs(self.dirname)
 			try:
 				self.fileIndex = self.files.index(os.path.abspath(self.filename))
 			except ValueError:
@@ -758,7 +765,7 @@ class ImageViewer(QMainWindow):
 			for url in event.mimeData().urls():
 				if os.path.isdir(url.toLocalFile()):
 					try:
-						for f in list_dir_img_abs(url.toLocalFile()):
+						for f in self.listDirImgAbs(url.toLocalFile()):
 							files.append(f)
 					except Exception as e:
 						QMessageBox.critical(self, WINDOW_TITLE, str(e))
@@ -1211,7 +1218,7 @@ class SearchForFilesRecursivelyDialog(QDialog):
 		l.addWidget(self.caseSensitiveCB, l.rowCount(), 0, 1, 3)
 		self.exploreDotDirectoriesCB = QCheckBox("Also explore subdirectories with name starting with a dot")
 		l.addWidget(self.exploreDotDirectoriesCB, l.rowCount(), 0, 1, 3)
-		self.doNotFilterKnowExtensions = QCheckBox("Also return files without known image extension (%s)" % (' '.join(IMG_EXT)))
+		self.doNotFilterKnowExtensions = QCheckBox("Also return files without known image extension (%s)" % (' '.join(self.imgsExt)))
 		l.addWidget(self.doNotFilterKnowExtensions, l.rowCount(), 0, 1, 3)
 
 		self.searchBtn = QPushButton("&Search")
@@ -1300,12 +1307,6 @@ class SearchForFilesRecursivelyDialog(QDialog):
 			yield root, walk_files
 
 
-def is_image_ext(filename):
-	return os.path.splitext(filename)[1].lower() in IMG_EXT
-
-def list_dir_img_abs(path='.'):
-	return list(map(lambda f: os.path.abspath(path+'/'+f), sorted(filter(is_image_ext, os.listdir(path)), key=str.casefold)))
-
 def main():
 	app = QApplication(sys.argv)
 
@@ -1322,7 +1323,6 @@ def main():
 
 if __name__ == '__main__':
 	WINDOW_TITLE = "Jaggimage Viewer"
-	IMG_EXT = ['.'+f.data().decode('utf8') for f in QImageReader.supportedImageFormats()]
 	main()
 
 
