@@ -66,6 +66,9 @@ class ImageViewer(QMainWindow):
 		self.tryToLoadAnimationTimer = QTimer()
 		self.tryToLoadAnimationTimer.setSingleShot(True)
 		self.tryToLoadAnimationTimer.timeout.connect(self.tryToLoadAnimation)
+		self.wheelEventTimer = QTimer()
+		self.wheelEventTimer.setSingleShot(True)
+		self.wheelEventTimer.timeout.connect(self.wheelEventTimerTimeout)
 
 		self.fileIndex = 0
 		self.files = []
@@ -797,10 +800,14 @@ class ImageViewer(QMainWindow):
 			elif d < 0 and self.scaleFactor > 0.05:
 				self.setScale(max(self.scaleFactor*0.9, 0.05))
 		else:
-			if d < 0:
-				self.loadNextImage()
-			elif d > 0:
-				self.loadPreviousImage()
+			self.wheelEventDelta = d
+			self.wheelEventTimer.start(1)
+
+	def wheelEventTimerTimeout(self):
+		if self.wheelEventDelta < 0:
+			self.loadNextImage()
+		elif self.wheelEventDelta > 0:
+			self.loadPreviousImage()
 
 	def mouseDoubleClickEvent(self, event):
 		self.toggleFullScreen()
