@@ -29,7 +29,7 @@ class ImageViewer(QMainWindow):
 		super().__init__()
 		sys.excepthook = self.unhandledException
 		self.imgsExt = ['.'+f.data().decode('utf8') for f in QImageReader.supportedImageFormats()]
-		self.readConfig()
+		self.config = Config()
 		self.scaleFactor = 1
 		self.imageDescription = ""
 		self.windowDecorationSize = QSize(20, 30)
@@ -44,7 +44,7 @@ class ImageViewer(QMainWindow):
 		self.setCentralWidget(self.scrollArea)
 
 		self.setAcceptDrops(True)
-		if self.fullScreen:
+		if self.config.get("fullScreen"):
 			self.showFullScreen()
 
 		self.statusBar().hide()
@@ -98,7 +98,7 @@ class ImageViewer(QMainWindow):
 					filename = self.files[0]
 
 		self.loadImage(filename, firstRun=True)
-		if not self.fullScreen and not self.pixmap.isNull():
+		if not self.config.get("fullScreen") and not self.pixmap.isNull():
 			self.resize(self.pixmap.width(), self.pixmap.height())
 
 		self.show()
@@ -119,27 +119,6 @@ class ImageViewer(QMainWindow):
 	def listDirImgAbs(self, path='.'):
 		return list(map(lambda f: os.path.abspath(os.path.join(path, f)), sorted(filter(self.isImageExt, os.listdir(path)), key=str.casefold)))
 
-	def readConfig(self):
-		settings = QSettings("Jaggimage-Viewer")
-		self.fullScreen       = settings.value("fullScreen",       True,  type=bool)
-		self.zoomLock         = settings.value("zoomLock",         False, type=bool)
-		self.windowAutoResize = settings.value("windowAutoResize", True,  type=bool)
-		self.enableAnimation  = settings.value("enableAnimation",  True,  type=bool)
-		self.imgEditor        = settings.value("imgEditor",        "gimp")
-		self.transparencyColor= settings.value("transparencyColor","#ffffff")
-		self.backgroundColor  = settings.value("backgroundColor",  "#000000")
-
-	def writeConfig(self):
-		settings = QSettings("Jaggimage-Viewer")
-		settings.setValue("fullScreen", self.fullScreen)
-		settings.setValue("zoomLock", self.zoomLock)
-		settings.setValue("windowAutoResize", self.windowAutoResize)
-		settings.setValue("enableAnimation", self.enableAnimation)
-		settings.setValue("imgEditor", self.imgEditor)
-		settings.setValue("transparencyColor", self.transparencyColor)
-		settings.setValue("backgroundColor", self.backgroundColor)
-		settings.sync()
-
 	def contextMenuExec(self, pos):
 		try:
 			self.contextMenu.exec(pos)
@@ -158,7 +137,7 @@ class ImageViewer(QMainWindow):
 		self.contextMenu.addSeparator()
 		self.fullScreenMenuAction = QAction("Fullscreen")
 		self.fullScreenMenuAction.setCheckable(True)
-		self.fullScreenMenuAction.setChecked(self.fullScreen)
+		self.fullScreenMenuAction.setChecked(self.config.get("fullScreen"))
 		self.fullScreenMenuAction.setShortcut(Qt.Key_F)
 		self.fullScreenMenuAction.triggered.connect(self.toggleFullScreen)
 		self.contextMenu.addAction(self.fullScreenMenuAction)
@@ -172,7 +151,7 @@ class ImageViewer(QMainWindow):
 
 		self.enableAnimationMenuAction = QAction("Enable Animation")
 		self.enableAnimationMenuAction.setCheckable(True)
-		self.enableAnimationMenuAction.setChecked(self.enableAnimation)
+		self.enableAnimationMenuAction.setChecked(self.config.get("enableAnimation"))
 		self.enableAnimationMenuAction.setShortcut(Qt.Key_A)
 		self.enableAnimationMenuAction.triggered.connect(self.toggleEnableAnimation)
 		self.contextMenu.addAction(self.enableAnimationMenuAction)
@@ -185,24 +164,24 @@ class ImageViewer(QMainWindow):
 
 		self.zoomLockMenuAction = QAction("Zoom Lock")
 		self.zoomLockMenuAction.setCheckable(True)
-		self.zoomLockMenuAction.setChecked(self.zoomLock)
+		self.zoomLockMenuAction.setChecked(self.config.get("zoomLock"))
 		self.zoomLockMenuAction.setShortcut(Qt.CTRL|Qt.Key_Slash)
 		self.zoomLockMenuAction.triggered.connect(self.toggleZoomLock)
 		self.contextMenu.addAction(self.zoomLockMenuAction)
 
 		self.windowAutoResizeMenuAction = QAction("Auto-Resize Window")
 		self.windowAutoResizeMenuAction.setCheckable(True)
-		self.windowAutoResizeMenuAction.setChecked(self.windowAutoResize)
+		self.windowAutoResizeMenuAction.setChecked(self.config.get("windowAutoResize"))
 		self.windowAutoResizeMenuAction.triggered.connect(self.toggleWindowAutoResize)
 		self.contextMenu.addAction(self.windowAutoResizeMenuAction)
 
 		self.contextMenu.addAction("Background Colors...", self.showColorsDialog, "Shift+C")
-		self.contextMenu.addAction("Save Currents Preferences to Defaults", self.writeConfig)
+		self.contextMenu.addAction("Save Currents Preferences to Defaults", self.config.write)
 
 		self.contextMenu.addSeparator()
 		self.contextMenu.addAction("Copy Image to Clipboard", self.clipBoardCopy, "Ctrl+C")
 		self.contextMenu.addAction("Edit Description", self.editDescription, "Ctrl+D")
-		self.contextMenu.addAction("Run Editor (%s)" % (os.path.basename(self.imgEditor)), self.runEditor, "Ctrl+E")
+		self.contextMenu.addAction("Run Editor (%s)" % (os.path.basename(self.config.get("imgEditor"))), self.runEditor, "Ctrl+E")
 		self.contextMenu.addAction("Rename", self.renameFile, "F2")
 		self.contextMenu.addAction("Delete", self.deleteFile, "Del")
 
@@ -251,8 +230,10 @@ class ImageViewer(QMainWindow):
 		self.colorsDialog = ColorsDialog(self)
 
 	def updateStyleSheet(self):
-		textColor = 'black' if qGray(QColor(self.transparencyColor).rgb()) > 100 else 'white'
-		self.setStyleSheet("#imageLabel { color: %s; background-color: %s; } QScrollArea { background-color: %s; }" % (textColor, self.transparencyColor, self.backgroundColor))
+		transparencyColor = self.config.get("transparencyColor")
+		backgroundColor = self.config.get("backgroundColor")
+		textColor = 'black' if qGray(QColor(transparencyColor).rgb()) > 100 else 'white'
+		self.setStyleSheet("#imageLabel { color: %s; background-color: %s; } QScrollArea { background-color: %s; }" % (textColor, transparencyColor, backgroundColor))
 
 	def loadImage(self, filename, preloadedPixmap=None, firstRun=False):
 		self.imageDescription = ""
@@ -294,18 +275,18 @@ class ImageViewer(QMainWindow):
 		else:
 			self.imageLabel.setPixmap(self.pixmap)
 
-			if self.zoomLock:
+			if self.config.get("zoomLock"):
 				self.setScale(self.scaleFactor)
 				self.scrollArea.setPositionAbs(0, 0)
 			else:
 				self.imageLabel.adjustSize()
 				self.scaleFactor = 1
 				self.setScaleBestFitIfLargerToScreenOnly(firstRun)
-				if not self.fullScreen and self.windowAutoResize:
+				if not self.config.get("fullScreen") and self.config.get("windowAutoResize"):
 					w, h = int(self.scaleFactor*self.pixmap.width()), int(self.scaleFactor*self.pixmap.height())
 					self.resize(w, h)
 
-		if self.enableAnimation:
+		if self.config.get("enableAnimation"):
 			self.tryToLoadAnimationTimer.start(250)
 
 		self.setIconFromPixmapTimer.start(300)
@@ -388,8 +369,8 @@ class ImageViewer(QMainWindow):
 				misc+=" (frame %d/%d)" % (self.imageLabel.movie().currentFrameNumber()+1, self.imageLabel.movie().frameCount())
 		self.statusBar().showMessage("%d/%d   %s   %s   %dx%d%s   %d%%   %s" % (self.fileIndex+1, len(self.files), basename, sizeStr, self.pixmap.width(), self.pixmap.height(), misc, 100*self.scaleFactor, self.imageDescription))
 
-		if self.imageDescription and self.fullScreen:
-				self.statusBar().show()
+		if self.imageDescription and self.config.get("fullScreen"):
+			self.statusBar().show()
 
 	def preloadPreviousImage(self):
 		if len(self.files) == 0: return
@@ -475,7 +456,7 @@ class ImageViewer(QMainWindow):
 
 			self.descriptionEditor = DescriptionEditor(self.imageDescription, self.filename)
 			self.descriptionEditor.descriptionChanged.connect(self.descriptionChanged)
-			if self.fullScreen:
+			if self.config.get("fullScreen"):
 				x = self.geometry().x()
 				y = self.geometry().y()
 				self.descriptionEditor.move(x+5, y)
@@ -504,7 +485,7 @@ class ImageViewer(QMainWindow):
 		self.imageLabel.setScaledContents(True if scale != 1 else False)
 		self.imageLabel.resize(w, h)
 
-		if not self.fullScreen and self.windowAutoResize:
+		if not self.config.get("fullScreen") and self.config.get("windowAutoResize"):
 			self.resize(w, h)
 
 		self.scrollArea.setPositionMiddleF(xf, yf)
@@ -537,10 +518,10 @@ class ImageViewer(QMainWindow):
 		else:                                          self.setScale(minTargetScaleFactor)
 
 	def getTargetSize(self, firstRun=False):
-		if self.fullScreen:
+		if self.config.get("fullScreen"):
 			return self.screen().size()
 
-		if firstRun or self.windowAutoResize:
+		if firstRun or self.config.get("windowAutoResize"):
 			targetSize = self.screen().availableGeometry().size()
 			windowDecorationSize = self.frameGeometry().size() - self.size()
 			if windowDecorationSize.isValid():
@@ -550,19 +531,23 @@ class ImageViewer(QMainWindow):
 		return self.scrollArea.size()
 
 
-	def toggleFullScreen(self):
-		if self.fullScreen:
+	def toggleFullScreen(self, forceFullScreenState=None):
+		if forceFullScreenState is not None:
+			val = forceFullScreenState
+			self.config.set("fullScreen", val)
+		else:
+			val = self.config.toggle("fullScreen")
+
+		if val:
+			self.showFullScreen()
+		else:
 			self.showNormal()
 			if not self.pixmap.isNull():
 				w = int(self.pixmap.width()*self.scaleFactor)
 				h = int(self.pixmap.height()*self.scaleFactor)
 				self.resize(w, h)
-			self.fullScreen = False
-		else:
-			self.showFullScreen()
-			self.fullScreen = True
 
-		try: self.fullScreenMenuAction.setChecked(self.fullScreen)
+		try: self.fullScreenMenuAction.setChecked(val)
 		except: pass
 
 	def toggleStatusBar(self):
@@ -575,15 +560,15 @@ class ImageViewer(QMainWindow):
 		except: pass
 
 	def toggleEnableAnimation(self):
-		self.enableAnimation = not self.enableAnimation
-		try: self.enableAnimationMenuAction.setChecked(self.enableAnimation)
+		val = self.config.toggle("enableAnimation")
+		try: self.enableAnimationMenuAction.setChecked(val)
 		except: pass
 
 		if not self.filename: return
 
 		if self.imageLabel.movie():
-			self.imageLabel.movie().setPaused(not self.enableAnimation)
-		elif self.enableAnimation:
+			self.imageLabel.movie().setPaused(not self.config.get("enableAnimation"))
+		elif val:
 			QApplication.setOverrideCursor(Qt.WaitCursor)
 			movie = QMovie(self.filename)
 			self.imageLabel.setMovie(movie)
@@ -601,13 +586,13 @@ class ImageViewer(QMainWindow):
 		QApplication.restoreOverrideCursor()
 
 	def toggleZoomLock(self):
-		self.zoomLock = not(self.zoomLock)
-		try: self.zoomLockMenuAction.setChecked(self.zoomLock)
+		val = self.config.toggle("zoomLock")
+		try: self.zoomLockMenuAction.setChecked(val)
 		except: pass
 
 	def toggleWindowAutoResize(self):
-		self.windowAutoResize = not(self.windowAutoResize)
-		try: self.windowAutoResizeMenuAction.setChecked(self.windowAutoResize)
+		val = self.config.toggle("windowAutoResize")
+		try: self.windowAutoResizeMenuAction.setChecked(val)
 		except: pass
 		self.setScale()
 
@@ -630,19 +615,11 @@ class ImageViewer(QMainWindow):
 		super().resize(min(w, maxSize.width()), min(h, maxSize.height()))
 
 	def runEditor(self):
-		self.showNormal()
-		self.fullScreen = False
-		self.setScale()
-		try: self.fullScreenMenuAction.setChecked(False)
-		except: pass
 
+		self.toggleFullScreen(forceFullScreenState=False)
 		try:
-			try:
-				Popen([self.imgEditor, self.filename])
-			except:
-				from subprocess import Popen
-				Popen([self.imgEditor, self.filename])
-
+			from subprocess import Popen
+			Popen([self.config.get("imgEditor"), self.filename])
 		except Exception as e:
 			QMessageBox.warning(self, WINDOW_TITLE, str(e))
 
@@ -974,7 +951,7 @@ class CustomMovableScrollArea(QScrollArea):
 		self.horizontalScrollBar().setValue(newScrollBarPos.x())
 		self.verticalScrollBar().setValue(newScrollBarPos.y())
 
-		if not self.parent().fullScreen:
+		if not self.parent().config.get("fullScreen"):
 			windowMove = QPoint()
 			if newScrollBarPos.x() > self.horizontalScrollBar().maximum():
 				windowMove.setX(newScrollBarPos.x() - self.horizontalScrollBar().maximum())
@@ -1007,6 +984,51 @@ class CustomMovableScrollArea(QScrollArea):
 	def keyPressEvent(self, event):
 		self.setCursor(Qt.OpenHandCursor)
 		event.ignore()
+
+
+class Config():
+	fileName = "Jaggimage-Viewer"
+	defaults = {
+		"fullScreen": True,
+		"zoomLock": False,
+		"windowAutoResize": True,
+		"enableAnimation": True,
+		"imgEditor": "gimp",
+		"highlightRegEx": "",
+		"transparencyColor": "#fffff",
+		"backgroundColor": "#00000",
+		"descriptionEditorFontSize": 0
+	}
+
+	def __init__(self):
+		self.storedValues = {}
+		self.qsettingsObj = QSettings(self.fileName)
+
+	def set(self, settingName, value):
+		self.storedValues[settingName] = value
+		return value
+
+	def get(self, settingName):
+		try:
+			value = self.storedValues[settingName]
+		except KeyError:
+			if settingName not in self.defaults:
+				return self.qsettingsObj.value(settingName, None)
+
+			valueDefault = self.defaults[settingName]
+			value = self.qsettingsObj.value(settingName, valueDefault, type(valueDefault))
+			self.storedValues[settingName] = value
+		return value
+
+	def toggle(self, settingName):
+		value = not self.get(settingName)
+		self.set(settingName, value)
+		return value
+
+	def write(self):
+		for settingName, value in self.storedValues.items():
+			self.qsettingsObj.setValue(settingName, value)
+		self.qsettingsObj.sync()
 
 
 class DescriptionEditor(QDialog):
@@ -1125,7 +1147,7 @@ class ColorsDialog(QDialog):
 		l = QGridLayout(self)
 		l.addWidget(QLabel("Transparency color:"), 1, 0)
 		self.transparencyColorLE = QLineEdit()
-		self.transparencyColorLE.setText(self.parent.transparencyColor)
+		self.transparencyColorLE.setText(self.parent.config.get("transparencyColor"))
 		l.addWidget(self.transparencyColorLE, 1, 1)
 		self.transparencyColorLE.textChanged.connect(self.validateColors)
 		self.behindImageBtn = QToolButton()
@@ -1135,7 +1157,7 @@ class ColorsDialog(QDialog):
 
 		l.addWidget(QLabel("Background color:"), 2, 0)
 		self.backgroundColorLE = QLineEdit()
-		self.backgroundColorLE.setText(self.parent.backgroundColor)
+		self.backgroundColorLE.setText(self.parent.config.get("backgroundColor"))
 		self.backgroundColorLE.textChanged.connect(self.validateColors)
 		l.addWidget(self.backgroundColorLE, 2, 1)
 		self.aroundImageBtn = QToolButton()
@@ -1168,9 +1190,9 @@ class ColorsDialog(QDialog):
 			lineEdit.setProperty("valid", lineEdit.isValid)
 			match lineEdit.isValid, lineEdit:
 				case True, self.transparencyColorLE:
-					self.parent.transparencyColor = lineEdit.text()
+					self.parent.config.set("transparencyColor", lineEdit.text())
 				case True, self.backgroundColorLE:
-					self.parent.backgroundColor = lineEdit.text()
+					self.parent.config.set("backgroundColor", lineEdit.text())
 		self.parent.updateStyleSheet()
 
 	def closeEvent(self, event):
