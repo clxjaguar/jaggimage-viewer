@@ -1242,7 +1242,7 @@ class SearchForFilesRecursivelyDialog(QDialog):
 		l.addWidget(self.caseSensitiveCB, l.rowCount(), 0, 1, 3)
 		self.exploreDotDirectoriesCB = QCheckBox("Also explore subdirectories with name starting with a dot")
 		l.addWidget(self.exploreDotDirectoriesCB, l.rowCount(), 0, 1, 3)
-		self.doNotFilterKnowExtensions = QCheckBox("Also return files without known image extension (%s)" % (' '.join(self.imgsExt)))
+		self.doNotFilterKnowExtensions = QCheckBox("Also return files without known image extension (%s)" % (' '.join(self.parent.imgsExt)))
 		l.addWidget(self.doNotFilterKnowExtensions, l.rowCount(), 0, 1, 3)
 
 		self.searchBtn = QPushButton("&Search")
@@ -1296,7 +1296,7 @@ class SearchForFilesRecursivelyDialog(QDialog):
 		try:
 			currentDir, files = next(self.searchFct)
 			if not self.doNotFilterKnowExtensions.isChecked():
-				files = list(filter(is_image_ext, files))
+				files = list(filter(self.parent.isImageExt, files))
 			if self.filter:
 				files = list(filter(self.filter.search, files))
 			files.sort(key=str.casefold)
