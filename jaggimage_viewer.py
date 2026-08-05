@@ -455,7 +455,7 @@ class ImageViewer(QMainWindow):
 				self.descriptionEditor.displayDescription(self.imageDescription, self.filename)
 				return
 
-			self.descriptionEditor = DescriptionEditor(self.imageDescription, self.filename)
+			self.descriptionEditor = DescriptionEditor(self, self.imageDescription, self.filename)
 			self.descriptionEditor.descriptionChanged.connect(self.descriptionChanged)
 			if self.config.get("fullScreen"):
 				x = self.geometry().x()
@@ -1036,18 +1036,19 @@ class Config():
 
 class DescriptionEditor(QDialog):
 	descriptionChanged = pyqtSignal(str, str)
-	def __init__(self, description, imgFilename):
+	def __init__(self, parent, description, imgFilename):
 		super().__init__()
+		self.parent = parent
 		layout = QVBoxLayout(self)
 		layout.setContentsMargins(0, 0, 0, 0)
 		layout.setSpacing(0)
-		self.textEdit = self.CustomQPlainTextEdit()
+		self.textEdit = self.CustomTextEdit(self)
 		self.textEdit.textChanged.connect(self.textChanged)
 		layout.addWidget(self.textEdit)
 		hlayout = QHBoxLayout()
 		layout.addLayout(hlayout)
 		self.cancelBtn = QPushButton("&Close")
-		self.cancelBtn.clicked.connect(super().close)
+		self.cancelBtn.clicked.connect(self.close)
 		self.saveBtn = QPushButton("&Save to .txt")
 		self.saveBtn.clicked.connect(self.saveToTxt)
 
@@ -1056,10 +1057,26 @@ class DescriptionEditor(QDialog):
 			w.hide()
 			hlayout.addWidget(w)
 
+		regex = self.parent.config.get("highlightRegEx")
+		if regex:
+			self.setHighlightingRegEx(regex)
 		self.displayDescription(description, imgFilename)
 		self.show()
 
-	class CustomQPlainTextEdit(QPlainTextEdit):
+	class CustomTextEdit(QTextEdit):
+		def __init__(self, parent):
+			super().__init__()
+			self.setAcceptRichText(False)
+			fontSize = parent.parent.config.get("descriptionEditorFontSize")
+			if fontSize:
+				font = self.currentFont()
+				font.setPointSizeF(fontSize)
+				self.setFont(font)
+
+		def memorizeZoomLevel(self):
+			fontSize = self.currentFont().pointSizeF()
+			self.parent().parent.config.set("descriptionEditorFontSize", fontSize)
+
 		def keyPressEvent(self, event):
 			key = event.key()
 			match key:
@@ -1068,10 +1085,29 @@ class DescriptionEditor(QDialog):
 				case Qt.Key_Plus:
 					if event.modifiers() & Qt.ControlModifier:
 						self.zoomIn()
+						self.memorizeZoomLevel()
 						return
 				case Qt.Key_Minus:
 					if event.modifiers() & Qt.ControlModifier:
 						self.zoomOut()
+						self.memorizeZoomLevel()
+						return
+				case Qt.Key_R:
+					if event.modifiers() & Qt.ControlModifier:
+						regex = self.parent().parent.config.get("highlightRegEx")
+						while True:
+							regex, confirm = QInputDialog().getText(self, WINDOW_TITLE, "Highlighting Regex:", text=regex)
+							if not confirm: return
+							try:
+								self.parent().setHighlightingRegEx(regex)
+								self.parent().parent.config.set("highlightRegEx", regex)
+								return
+							except Exception as e:
+								QMessageBox.warning(self, WINDOW_TITLE, "Inbalid Regex: \"%s\":\n\n%s" % (regex, str(e)))
+
+				case Qt.Key_S:
+					if event.modifiers() & Qt.ControlModifier:
+						self.parent().saveToTxt()
 						return
 
 			super().keyPressEvent(event)
@@ -1081,20 +1117,57 @@ class DescriptionEditor(QDialog):
 				d = event.angleDelta().y()
 				if d > 0:
 					self.zoomIn()
+					self.memorizeZoomLevel()
 					return
 				elif d < 0:
 					self.zoomOut()
+					self.memorizeZoomLevel()
 					return
 
 			super().wheelEvent(event)
 
+	def setHighlightingRegEx(self, newRegEx):
+		if 're' not in sys.modules.keys():
+			import re
+
+		re = sys.modules['re']
+		self.regExHighting = re.compile(newRegEx, re.IGNORECASE)
+		self.setText()
+
+	def setText(self, text=None):
+		if text is None:
+			text = self.textEdit.toPlainText()
+		try:
+			text = text.replace("<", "&lt;")
+			text = self.regExHighting.sub(r"<b>\1</b>", text)
+			text = text.replace("\n", "<br>")
+			self.textEdit.setText(text)
+		except:
+			self.textEdit.setPlainText(text)
+
 	def displayDescription(self, description, imgFilename):
 		self.imgFilename = imgFilename
-		self.textEdit.setPlainText(description)
+		self.setText(description)
 		self.setWindowTitle(os.path.basename(self.imgFilename))
 		for w in self.cancelBtn, self.saveBtn:
 			w.hide()
+
+		savedSize = self.parent.config.get("descriptionEditorSize")
+		if savedSize is not None:
+			self.resize(savedSize)
+		savedPos = self.parent.config.get("descriptionEditorPosition")
+		if savedPos is not None:
+			self.move(savedPos)
+
 		self.show()
+
+	def resizeEvent(self, event):
+		savedSize = self.size()
+		self.parent.config.set("descriptionEditorSize", savedSize)
+
+	def moveEvent(self, event):
+		savedPos = self.pos()
+		self.parent.config.set("descriptionEditorPosition", savedPos)
 
 	def textChanged(self):
 		for w in self.cancelBtn, self.saveBtn:
