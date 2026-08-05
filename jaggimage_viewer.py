@@ -291,7 +291,7 @@ class ImageViewer(QMainWindow):
 			self.tryToLoadAnimationTimer.start(250)
 
 		self.setIconFromPixmapTimer.start(300)
-		self.getDescriptionTimer.start(200)
+		self.getDescriptionTimer.start(50)
 		self.updateWindowTitleAndStatusBar()
 
 	def setIconFromPixmap(self):
