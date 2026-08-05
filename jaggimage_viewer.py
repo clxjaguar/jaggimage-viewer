@@ -51,6 +51,7 @@ class ImageViewer(QMainWindow):
 		self.setWindowTitle(WINDOW_TITLE)
 
 		self.descriptionEditor = None
+		self.filename, self.pixmap, self.prevPixmap, self.nextPixmap = None, QPixmap(), None, None
 		self.getDescriptionTimer = QTimer()
 		self.getDescriptionTimer.setSingleShot(True)
 		self.getDescriptionTimer.timeout.connect(self.getDescription)
@@ -615,6 +616,8 @@ class ImageViewer(QMainWindow):
 		super().resize(min(w, maxSize.width()), min(h, maxSize.height()))
 
 	def runEditor(self):
+		if self.filename is None:
+			return
 
 		self.toggleFullScreen(forceFullScreenState=False)
 		try:
