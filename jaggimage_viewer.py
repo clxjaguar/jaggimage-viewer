@@ -672,7 +672,7 @@ class ImageViewer(QMainWindow):
 	def deleteFile(self):
 		if self.filename is None: return
 		filename = self.filename
-		a = QMessageBox.warning(self, WINDOW_TITLE, "Are you sure you want to delete the file\n\"%s\"?\n\nThere is NO trash can on this operation." % (filename), QMessageBox.Yes|QMessageBox.Cancel)
+		a = QMessageBox.warning(self, WINDOW_TITLE, "Are you sure you want to delete the file\n\"%s\"?\n\nThere is NO trash can on this operation." % (filename), QMessageBox.Yes|QMessageBox.Cancel, QMessageBox.Yes)
 		if a == QMessageBox.Yes:
 			try:
 				os.remove(self.filename)
