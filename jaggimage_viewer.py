@@ -1413,7 +1413,15 @@ class SearchForFilesRecursivelyDialog(QDialog):
 def main():
 	app = QApplication(sys.argv)
 
-	files = list(filter(lambda a: not a.startswith('-'), sys.argv[1:]))
+	files = []
+	for arg in sys.argv[1:]:
+		if arg.startswith('-'):
+			continue # ignore arguments
+		elif arg.startswith('file://'):
+			files.append(arg[7:])
+		else:
+			files.append(arg)
+
 	match len(files):
 		case 0: # no paths given
 			w = ImageViewer()
