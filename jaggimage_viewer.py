@@ -118,7 +118,10 @@ class ImageViewer(QMainWindow):
 		return os.path.splitext(filename)[1].lower() in self.imgsExt
 
 	def listDirImgAbs(self, path='.'):
-		return list(map(lambda f: os.path.abspath(os.path.join(path, f)), sorted(filter(self.isImageExt, os.listdir(path)), key=str.casefold)))
+		try:
+			return list(map(lambda f: os.path.abspath(os.path.join(path, f)), sorted(filter(self.isImageExt, os.listdir(path)), key=str.casefold)))
+		except FileNotFoundError:
+			return []
 
 	def contextMenuExec(self, pos):
 		try:
