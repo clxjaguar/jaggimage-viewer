@@ -24,6 +24,8 @@ try:
 except ImportError:
 	version = "0.0.0"
 
+WINDOW_TITLE = "Jaggimage Viewer"
+
 class ImageViewer(QMainWindow):
 	def __init__(self, filename=None, filesList=None):
 		super().__init__()
@@ -1433,7 +1435,4 @@ def main():
 	sys.exit(app.exec_())
 
 if __name__ == '__main__':
-	WINDOW_TITLE = "Jaggimage Viewer"
 	main()
-
-
