@@ -1061,7 +1061,6 @@ class DescriptionEditor(QDialog):
 		if regex:
 			self.setHighlightingRegEx(regex)
 		self.displayDescription(description, imgFilename)
-		self.show()
 
 	class CustomTextEdit(QTextEdit):
 		def __init__(self, parent):
@@ -1158,6 +1157,7 @@ class DescriptionEditor(QDialog):
 		savedPos = self.parent.config.get("descriptionEditorPosition")
 		if savedPos is not None:
 			self.move(savedPos)
+			QTimer.singleShot(1, lambda: self.move(savedPos))
 
 		self.show()
 
