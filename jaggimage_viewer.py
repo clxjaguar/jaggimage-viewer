@@ -47,7 +47,7 @@ class ImageViewer(QMainWindow):
 
 		self.setAcceptDrops(True)
 		if self.config.get("fullScreen"):
-			self.showFullScreen()
+			self.toggleFullScreen(True)
 
 		self.statusBar().hide()
 		self.setWindowTitle(WINDOW_TITLE)
@@ -539,21 +539,25 @@ class ImageViewer(QMainWindow):
 
 	def toggleFullScreen(self, forceFullScreenState=None):
 		if forceFullScreenState is not None:
-			val = forceFullScreenState
-			self.config.set("fullScreen", val)
+			fullScreenState = forceFullScreenState
+			self.config.set("fullScreen", fullScreenState)
 		else:
-			val = self.config.toggle("fullScreen")
+			fullScreenState = self.config.toggle("fullScreen")
 
-		if val:
+		if fullScreenState:
 			self.showFullScreen()
+			self.scrollArea.setCursor(Qt.BlankCursor)
 		else:
 			self.showNormal()
+			self.scrollArea.setCursor(Qt.OpenHandCursor)
 			if not self.pixmap.isNull():
 				w = int(self.pixmap.width()*self.scaleFactor)
 				h = int(self.pixmap.height()*self.scaleFactor)
 				self.resize(w, h)
 
-		try: self.fullScreenMenuAction.setChecked(val)
+		self.imageLabel.setMouseTracking(fullScreenState)
+		self.scrollArea.setMouseTracking(fullScreenState)
+		try: self.fullScreenMenuAction.setChecked(fullScreenState)
 		except: pass
 
 	def toggleStatusBar(self):
@@ -934,6 +938,10 @@ class CustomMovableScrollArea(QScrollArea):
 		self.verticalScrollBar().setStyleSheet("QScrollBar { width:0px; }");
 		self.setAlignment(Qt.AlignVCenter|Qt.AlignHCenter)
 		self.setCursor(Qt.OpenHandCursor)
+		self.hideCursorTimer = QTimer()
+		self.hideCursorTimer.setSingleShot(True)
+		self.hideCursorTimer.timeout.connect(self.hideCursor)
+
 
 	def setPositionDelta(self, dx, dy):
 		self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + dx)
@@ -953,6 +961,13 @@ class CustomMovableScrollArea(QScrollArea):
 		self.verticalScrollBar().setValue(int(y*(self.verticalScrollBar().maximum() + self.size().height()) - self.size().height()/2))
 
 	def mouseMoveEvent(self, event):
+		if event.buttons() & (Qt.LeftButton|Qt.MiddleButton):
+			self.setCursor(Qt.ClosedHandCursor)
+		else:
+			self.setCursor(Qt.OpenHandCursor)
+			self.hideCursorTimer.start(1000)
+			return
+
 		cursorPos = QCursor().pos()
 		newScrollBarPos = self.scrollBarRef - cursorPos + self.refPos
 
@@ -978,6 +993,10 @@ class CustomMovableScrollArea(QScrollArea):
 
 		event.ignore()
 
+	def hideCursor(self):
+		if self.parent().config.get("fullScreen") and not QApplication.mouseButtons():
+			self.setCursor(Qt.BlankCursor)
+
 	def mousePressEvent(self, event):
 		self.refPos, self.parentRefPos = QCursor().pos(), self.parent().pos()
 		self.scrollBarRef = QPoint(self.horizontalScrollBar().value(), self.verticalScrollBar().value())
@@ -985,12 +1004,12 @@ class CustomMovableScrollArea(QScrollArea):
 
 	def mouseReleaseEvent(self, event):
 		self.setCursor(Qt.OpenHandCursor)
+		self.hideCursorTimer.start(1000)
 
 	def wheelEvent(self, event):
 		event.ignore()
 
 	def keyPressEvent(self, event):
-		self.setCursor(Qt.OpenHandCursor)
 		event.ignore()
 
 
