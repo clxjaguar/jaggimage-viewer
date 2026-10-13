@@ -840,12 +840,24 @@ class ImageViewer(QMainWindow):
 					self.setScale(1)
 
 			case Qt.Key_Plus:
-				if self.scaleFactor < 10.0:
-					self.setScale(min(self.scaleFactor*1.1, 10.0))
+				if self.imageLabel.movie():
+					if self.scaleFactor > 0.5:
+						self.setScale(int(self.scaleFactor)+1.0)
+					else:
+						self.setScale(1.0/(int(1.0/self.scaleFactor)-1.0))
+				else:
+					if self.scaleFactor < 10.0:
+						self.setScale(min(self.scaleFactor*1.1, 10.0))
 
 			case Qt.Key_Minus:
-				if self.scaleFactor > 0.05:
-					self.setScale(max(self.scaleFactor*0.9, 0.05))
+				if self.imageLabel.movie():
+					if self.scaleFactor > 1.0:
+						self.setScale(int(self.scaleFactor+.9)-1.0)
+					else:
+						self.setScale(1.0/(int(1.0/self.scaleFactor)+1.0))
+				else:
+					if self.scaleFactor > 0.05:
+						self.setScale(max(self.scaleFactor*0.9, 0.05))
 
 			case Qt.Key_F2:
 				self.renameFile()
