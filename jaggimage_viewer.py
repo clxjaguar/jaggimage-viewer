@@ -881,6 +881,14 @@ class ImageViewer(QMainWindow):
 				if event.modifiers() & Qt.ControlModifier:
 					self.openFileDialog()
 
+			case Qt.Key_N:
+				if event.modifiers() & Qt.ControlModifier:
+					w = ImageViewer(self.files[self.fileIndex], self.files)
+					try:
+						self.subInstances.append(w)
+					except AttributeError:
+						self.subInstances = [w]
+
 			case Qt.Key_Home:
 				self.loadFirstImage()
 

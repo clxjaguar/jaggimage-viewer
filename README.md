@@ -38,9 +38,11 @@ Most keyboard shortcuts are shown in the contextual menu (right click), but some
 | `F10`                                                    | Show contextual menu                                                     |
 | `Ctrl`+`O`                                               | Open a specific file (in same or different directory)                    |
 | `Ctrl`+`Shift`+`O`                                       | Open a dialog for searching images recursively                           |
+| `Ctrl`+`N`                                               | Open a new sub-instance of JaggimageViewer (another main window)         |
 | `Ctrl`+`C`                                               | Copy current image to clipboard                                          |
 | `Ctrl`+`E`                                               | Open the image with an external editor (gimp by default)                 |
-| `Escape`, `Ctrl`+`W` (and probably `Alt`+`F4` too)       | Quit the program                                                         |
+| `Escape`, `Ctrl`+`W` (and probably `Alt`+`F4` too)       | Quit the program (but not eventually opened sub-instances)               |
+| `Ctrl`+`Q`                                               | Quit the program (with all eventual sub-instances)                       |
 
 ## Installation
 
